@@ -43,7 +43,7 @@ func (s *Suite) TestNsm_linkerd() {
 	r.Run(`kubectl create ns ns-nsm-linkerd` + "\n" + `kubectl --kubeconfig=$KUBECONFIG2 apply -f https://raw.githubusercontent.com/networkservicemesh/deployments-k8s/f86bd634707a2aa7e59b06dedff8fac0e57b161f/examples/interdomain/nsm_linkerd/networkservice.yaml`)
 	r.Run(`kubectl --kubeconfig=$KUBECONFIG1 apply -f https://raw.githubusercontent.com/networkservicemesh/deployments-k8s/f86bd634707a2aa7e59b06dedff8fac0e57b161f/examples/interdomain/nsm_linkerd/greeting/client.yaml`)
 	r.Run(`kubectl --kubeconfig=$KUBECONFIG2 apply -k https://github.com/networkservicemesh/deployments-k8s/examples/interdomain/nsm_linkerd/nse-auto-scale?ref=f86bd634707a2aa7e59b06dedff8fac0e57b161f`)
-	r.Run(`kubectl --kubeconfig=$KUBECONFIG2 apply -f https://raw.githubusercontent.com/networkservicemesh/deployments-k8s/f86bd634707a2aa7e59b06dedff8fac0e57b161f/examples/interdomain/nsm_linkerd/greeting/server.yaml` + "\n" + `kubectl get deploy greeting -o yaml | linkerd inject - | kubectl apply -f -`)
+	r.Run(`kubectl --kubeconfig=$KUBECONFIG2 apply -f https://raw.githubusercontent.com/networkservicemesh/deployments-k8s/f86bd634707a2aa7e59b06dedff8fac0e57b161f/examples/interdomain/nsm_linkerd/greeting/server.yaml` + "\n" + `kubectl --kubeconfig=$KUBECONFIG2 wait --timeout=2m --for=condition=ready pod -l app=greeting` + "\n" + `kubectl get deploy greeting -o yaml | linkerd inject - | kubectl apply -f -`)
 	r.Run(`kubectl --kubeconfig=$KUBECONFIG1 wait --timeout=2m --for=condition=ready pod -l app=alpine`)
 	r.Run(`kubectl --kubeconfig=$KUBECONFIG1 exec deploy/alpine -c alpine -- ip ro add 10.96.0.10 via 10.244.1.1`)
 	r.Run(`kubectl --kubeconfig=$KUBECONFIG1 exec deploy/alpine -c cmd-nsc -- apk add curl`)
