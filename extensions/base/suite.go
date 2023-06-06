@@ -20,11 +20,13 @@
 package base
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/networkservicemesh/gotestmd/pkg/suites/shell"
 	"github.com/networkservicemesh/integration-tests/extensions/checkout"
+	"github.com/networkservicemesh/integration-tests/extensions/logs"
 	"github.com/networkservicemesh/integration-tests/extensions/prefetch"
 )
 
@@ -32,8 +34,18 @@ import (
 type Suite struct {
 	shell.Suite
 	// Add other extensions here
-	checkout checkout.Suite
-	prefetch prefetch.Suite
+	checkout        checkout.Suite
+	prefetch        prefetch.Suite
+	nsMonitorCtx    context.Context
+	nsMonitorCancel context.CancelFunc
+
+	storeSuiteLogs func()
+}
+
+// TearDownSuite stores logs from containers that spawned during SuiteSetup.
+func (s *Suite) TearDownSuite() {
+	s.storeSuiteLogs()
+	s.nsMonitorCancel()
 }
 
 const (
@@ -69,4 +81,9 @@ func (s *Suite) SetupSuite() {
 
 	s.prefetch.SetT(s.T())
 	s.prefetch.SetupSuite()
+
+	s.nsMonitorCtx, s.nsMonitorCancel = context.WithCancel(context.Background())
+	logs.MonitorNamespaces(s.nsMonitorCtx)
+
+	s.storeSuiteLogs = logs.Capture("suite")
 }
