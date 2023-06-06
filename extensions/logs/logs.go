@@ -39,8 +39,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/networkservicemesh/gotestmd/pkg/bash"
-
-	_ "github.com/google/uuid"
 )
 
 const (
