@@ -338,5 +338,6 @@ func monitorNamespaces(ctx context.Context, kubeClient kubernetes.Interface) {
 }
 
 func MonitorNamespaces(ctx context.Context) {
+	once.Do(initialize)
 	go monitorNamespaces(ctx, kubeClients[0])
 }
