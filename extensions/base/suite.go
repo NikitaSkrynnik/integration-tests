@@ -79,8 +79,8 @@ func (s *Suite) SetupSuite() {
 		fmt.Sprintf("https://api.github.com/repos/%v/contents/apps?ref=%v", repo, version),
 	}
 
-	// s.prefetch.SetT(s.T())
-	// s.prefetch.SetupSuite()
+	s.prefetch.SetT(s.T())
+	s.prefetch.SetupSuite()
 
 	s.nsMonitorCtx, s.nsMonitorCancel = context.WithCancel(context.Background())
 	logs.MonitorNamespaces(s.nsMonitorCtx)
