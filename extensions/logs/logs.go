@@ -328,12 +328,7 @@ func monitorNamespaces(ctx context.Context, kubeClient kubernetes.Interface) {
 			}
 		}
 
-		nsMap.Range(func(key string, value *namespace) bool {
-			fmt.Println(key)
-			return true
-		})
-
-		time.Sleep(5000 * time.Millisecond)
+		time.Sleep(5000 * time.Second)
 	}
 }
 
