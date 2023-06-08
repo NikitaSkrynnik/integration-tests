@@ -44,6 +44,19 @@ func Run(t *testing.T, s suite.TestingSuite) {
 	methodFinder := reflect.TypeOf(s)
 	suiteName := methodFinder.Elem().Name()
 
+	t.Cleanup(func() {
+		if suiteSetupDone {
+			if tearDownAllSuite, ok := s.(suite.TearDownAllSuite); ok {
+				tearDownAllSuite.TearDownSuite()
+			}
+
+			if suiteWithStats, measureStats := s.(WithStats); measureStats {
+				stats.End = time.Now()
+				suiteWithStats.HandleStats(suiteName, stats)
+			}
+		}
+	})
+
 	for i := 0; i < methodFinder.NumMethod(); i++ {
 		method := methodFinder.Method(i)
 
@@ -114,17 +127,6 @@ func Run(t *testing.T, s suite.TestingSuite) {
 		tests = append(tests, test)
 	}
 
-	if suiteSetupDone {
-		if tearDownAllSuite, ok := s.(suite.TearDownAllSuite); ok {
-			tearDownAllSuite.TearDownSuite()
-		}
-
-		if suiteWithStats, measureStats := s.(WithStats); measureStats {
-			stats.End = time.Now()
-			suiteWithStats.HandleStats(suiteName, stats)
-		}
-	}
-
 	if len(tests) == 0 {
 		t.Log("warning: no tests to run")
 		return
@@ -134,7 +136,6 @@ func Run(t *testing.T, s suite.TestingSuite) {
 	for _, test := range tests {
 		t.Run(test.Name, test.F)
 	}
-
 }
 
 // Filtering method according to set regular expression

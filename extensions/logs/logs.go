@@ -20,9 +20,9 @@
 package logs
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -32,6 +32,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/edwarnicke/genericsync"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/networkservicemesh/gotestmd/pkg/bash"
 	"github.com/sirupsen/logrus"
@@ -44,7 +45,7 @@ import (
 )
 
 const (
-	defaultQPS        = 5 // this is default value for QPS of kubeconfig. See at documentation.
+	defaultQPS        = 500 // this is default value for QPS of kubeconfig. See at documentation.
 	fromAllNamespaces = ""
 )
 
@@ -292,14 +293,14 @@ func MonitorNamespaces(ctx context.Context, name string) {
 	fmt.Println("Starting monitoring namespaces")
 	once.Do(initialize)
 
-	for i := 0; i < config.MaxKubeConfigs; i++ {
-		basedir := filepath.Join(config.ArtifactsDir, fmt.Sprintf("cluster%v", i), name)
-		go monitorNamespaces(ctx, kubeClients[0], basedir)
+	for i := range kubeClients {
+		suitedir := filepath.Join(config.ArtifactsDir, fmt.Sprintf("cluster%v", i), name)
+		go monitorNamespaces(ctx, kubeClients[i], suitedir)
 	}
-
 }
 
-func monitorNamespaces(ctx context.Context, kubeClient kubernetes.Interface, basedir string) {
+func monitorNamespaces(ctx context.Context, kubeClient kubernetes.Interface, suitedir string) {
+	podMap := new(genericsync.Map[string, func()])
 	watchList := cache.NewListWatchFromClient(kubeClient.CoreV1().RESTClient(), "pods", v1.NamespaceAll, fields.Everything())
 
 	_, controller := cache.NewInformer(
@@ -308,16 +309,43 @@ func monitorNamespaces(ctx context.Context, kubeClient kubernetes.Interface, bas
 		time.Second*0,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				if pod, ok := obj.(*corev1.Pod); ok {
-					if matchRegex.MatchString(pod.Namespace) {
-						p := filepath.Join(basedir, pod.Namespace)
-						if _, err := os.Stat(p); err != nil {
-							_ = os.MkdirAll(p, os.ModePerm)
-						}
-
-						collectPodLogs(ctx, kubeClient, pod)
-					}
+				pod, ok := obj.(*corev1.Pod)
+				if !ok {
+					return
 				}
+
+				if matchRegex.MatchString(pod.Namespace) {
+					podKey := fmt.Sprintf("%v-%v", pod.Namespace, pod.Name)
+					if _, ok := podMap.Load(podKey); ok {
+						return
+					}
+					testdir := filepath.Join(suitedir, pod.Namespace)
+					if _, err := os.Stat(testdir); err != nil {
+						fmt.Printf("creting dir %v\n", testdir)
+						_ = os.MkdirAll(testdir, os.ModePerm)
+					}
+
+					collectCtx, collectCancel := context.WithCancel(ctx)
+					podMap.Store(podKey, collectCancel)
+
+					for _, container := range pod.Spec.Containers {
+						go collectContainerLogs(collectCtx, kubeClient, pod, container.Name, testdir)
+					}
+
+				}
+			},
+
+			DeleteFunc: func(obj interface{}) {
+				pod, ok := obj.(*corev1.Pod)
+				if !ok {
+					return
+				}
+
+				if matchRegex.MatchString(pod.Namespace) {
+					cancel, _ := podMap.Load(fmt.Sprintf("%v-%v", pod.Namespace, pod.Name))
+					cancel()
+				}
+
 			},
 		},
 	)
@@ -329,37 +357,36 @@ func monitorNamespaces(ctx context.Context, kubeClient kubernetes.Interface, bas
 	close(stop)
 }
 
-func collectPodLogs(ctx context.Context, kubeClient kubernetes.Interface, pod *corev1.Pod) {
-	fmt.Printf("Starting collecting logs from %v\n", pod.Name)
-
-	for _, container := range pod.Spec.Containers {
-		go collectContainerLogs(ctx, kubeClient, pod, container.Name)
-	}
-}
-
-func collectContainerLogs(ctx context.Context, kubeClient kubernetes.Interface, pod *corev1.Pod, container string) error {
+func collectContainerLogs(collectCtx context.Context, kubeClient kubernetes.Interface, pod *corev1.Pod, container, testdir string) error {
 	req := kubeClient.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{Follow: true, Container: container})
-	reader, err := req.Stream(ctx)
+	reader, err := req.Stream(collectCtx)
 
 	for err != nil {
 		select {
-		case <-ctx.Done():
+		case <-collectCtx.Done():
 			return err
 		default:
 			time.Sleep(300 * time.Millisecond)
-			reader, err = req.Stream(ctx)
+			reader, err = req.Stream(collectCtx)
 		}
 	}
 	defer reader.Close()
 
-	filepath := filepath.Join(config.ArtifactsDir, pod.Namespace, pod.Name) + "-" + container + ".log"
+	logBuffer := new(bytes.Buffer)
+	//file, _ := os.Create(filepath)
+	filepath := filepath.Join(testdir, pod.Name) + "-" + container + ".log"
 
-	file, _ := os.Create(filepath)
-	_, err = io.Copy(file, reader)
-	if err != nil {
-		fmt.Printf("Copying failed: %v\n", err.Error())
+	for {
+		select {
+		case <-collectCtx.Done():
+			fmt.Printf("Saving logs to file %v\n", filepath)
+			return os.WriteFile(filepath, logBuffer.Bytes(), os.ModePerm)
+		default:
+			bufferSize := 32 * 1024
+			buffer := make([]byte, bufferSize)
+
+			read, _ := reader.Read(buffer)
+			logBuffer.Write(buffer[:read])
+		}
 	}
-
-	fmt.Printf("Finished collecting logs from pod %v\n", pod.Name)
-	return nil
 }
