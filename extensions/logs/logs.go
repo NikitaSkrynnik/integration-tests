@@ -288,15 +288,18 @@ func Capture(name string) context.CancelFunc {
 	}
 }
 
-func MonitorNamespaces(ctx context.Context) {
+func MonitorNamespaces(ctx context.Context, name string) {
 	fmt.Println("Starting monitoring namespaces")
 	once.Do(initialize)
-	go monitorNamespaces(ctx, kubeClients[0])
+
+	for i := 0; i < config.MaxKubeConfigs; i++ {
+		basedir := filepath.Join(config.ArtifactsDir, fmt.Sprintf("cluster%v", i), name)
+		go monitorNamespaces(ctx, kubeClients[0], basedir)
+	}
+
 }
 
-func monitorNamespaces(ctx context.Context, kubeClient kubernetes.Interface) {
-	//	nsMap := make(map[string]struct{})
-
+func monitorNamespaces(ctx context.Context, kubeClient kubernetes.Interface, basedir string) {
 	watchList := cache.NewListWatchFromClient(kubeClient.CoreV1().RESTClient(), "pods", v1.NamespaceAll, fields.Everything())
 
 	_, controller := cache.NewInformer(
@@ -307,7 +310,7 @@ func monitorNamespaces(ctx context.Context, kubeClient kubernetes.Interface) {
 			AddFunc: func(obj interface{}) {
 				if pod, ok := obj.(*corev1.Pod); ok {
 					if matchRegex.MatchString(pod.Namespace) {
-						p := filepath.Join(config.ArtifactsDir, pod.Namespace)
+						p := filepath.Join(basedir, pod.Namespace)
 						if _, err := os.Stat(p); err != nil {
 							_ = os.MkdirAll(p, os.ModePerm)
 						}
@@ -324,67 +327,7 @@ func monitorNamespaces(ctx context.Context, kubeClient kubernetes.Interface) {
 
 	<-ctx.Done()
 	close(stop)
-
-	// for event := range watcher.ResultChan() {
-	// 	ns := event.Object.(*corev1.Namespace)
-	// 	if event.Type == watch.Added {
-	// 		fmt.Printf("Namespaces added %v\n", ns.Name)
-	// 	}
-	// }
-
-	// for {
-	// 	select {
-	// 	case <-ctx.Done():
-	// 		return
-	// 	default:
-	// 	}
-
-	// 	getCtx, cancel := context.WithTimeout(ctx, config.Timeout)
-	// 	defer cancel()
-	// 	nsList, err := kubeClient.CoreV1().Namespaces().List(getCtx, v1.ListOptions{})
-	// 	if err != nil {
-	// 		return
-	// 	}
-
-	// 	for _, ns := range nsList.Items {
-	// 		if matchRegex.MatchString(ns.Name) {
-	// 			if _, ok := nsMap[ns.Name]; !ok {
-	// 				nsMap[ns.Name] = struct{}{}
-	// 				go monitorPods(ctx, kubeClient, ns.Name)
-	// 			}
-	// 		}
-	// 	}
-
-	// 	time.Sleep(5000 * time.Millisecond)
-	// }
 }
-
-// func monitorPods(ctx context.Context, kubeClient kubernetes.Interface, namespace string) {
-// 	fmt.Printf("Starting monitoring pods in %v\n", namespace)
-// 	podsMap := make(map[string]struct{})
-
-// 	_ = os.MkdirAll(filepath.Join(config.ArtifactsDir, namespace), os.ModePerm)
-
-// 	for {
-// 		select {
-// 		case <-ctx.Done():
-// 			return
-// 		default:
-// 		}
-
-// 		getCtx, cancel := context.WithTimeout(ctx, config.Timeout)
-// 		defer cancel()
-// 		podList, _ := kubeClient.CoreV1().Pods(namespace).List(getCtx, v1.ListOptions{})
-// 		for _, pod := range podList.Items {
-// 			if pod.Status.Phase == corev1.PodRunning {
-// 				if _, ok := podsMap[pod.Name]; !ok {
-// 					podsMap[pod.Name] = struct{}{}
-// 					go collectPodLogs(ctx, kubeClient, &pod)
-// 				}
-// 			}
-// 		}
-// 	}
-// }
 
 func collectPodLogs(ctx context.Context, kubeClient kubernetes.Interface, pod *corev1.Pod) {
 	fmt.Printf("Starting collecting logs from %v\n", pod.Name)

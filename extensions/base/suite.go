@@ -83,7 +83,5 @@ func (s *Suite) SetupSuite() {
 	s.prefetch.SetupSuite()
 
 	s.nsMonitorCtx, s.nsMonitorCancel = context.WithCancel(context.Background())
-	logs.MonitorNamespaces(s.nsMonitorCtx)
-
-	s.storeSuiteLogs = logs.Capture("suite")
+	logs.MonitorNamespaces(s.nsMonitorCtx, s.T().Name())
 }
