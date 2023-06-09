@@ -86,7 +86,7 @@ func (s *Suite) TestExclude_prefixes() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete configmap excluded-prefixes-config` + "\n" + `kubectl delete ns ns-exclude-prefixes`)
 	})
-	r.Run(`kubectl apply -k https://github.com/NiktaSkrynnik/deployments-k8s/examples/features/exclude-prefixes/configmap?ref=3201a2720b54a228a2fe248ee73a28c2755467b6`)
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/features/exclude-prefixes/configmap?ref=5a9bdf42902474b17fea95ab459ce98d7b5aa3d0`)
 	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/features/exclude-prefixes?ref=5a9bdf42902474b17fea95ab459ce98d7b5aa3d0`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-exclude-prefixes`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-exclude-prefixes`)
