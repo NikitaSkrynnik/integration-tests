@@ -29,7 +29,12 @@ func failOnPanic(t *testing.T, r interface{}) {
 	}
 }
 
-func Run(t *testing.T, s suite.TestingSuite) {
+func Run(t *testing.T, s suite.TestingSuite, excludedTests ...string) {
+	excludedTestsSet := make(map[string]struct{})
+	for _, test := range excludedTests {
+		excludedTestsSet[test] = struct{}{}
+	}
+
 	defer recoverAndFailOnPanic(t)
 	var suiteSetupDone bool
 
@@ -70,6 +75,11 @@ func Run(t *testing.T, s suite.TestingSuite) {
 			continue
 		}
 
+		parallel := true
+		if _, ok := excludedTestsSet[method.Name]; ok {
+			parallel = false
+		}
+
 		if !suiteSetupDone {
 			if stats != nil {
 				stats.Start = time.Now()
@@ -87,7 +97,9 @@ func Run(t *testing.T, s suite.TestingSuite) {
 			F: func(testingT *testing.T) {
 				defer recoverAndFailOnPanic(t)
 
-				testingT.Parallel()
+				if parallel {
+					testingT.Parallel()
+				}
 				defer func() {
 					r := recover()
 

@@ -38,13 +38,11 @@ type Suite struct {
 	prefetch        prefetch.Suite
 	nsMonitorCtx    context.Context
 	nsMonitorCancel context.CancelFunc
-
-	storeSuiteLogs func()
 }
 
 // TearDownSuite stores logs from containers that spawned during SuiteSetup.
 func (s *Suite) TearDownSuite() {
-	s.storeSuiteLogs()
+	fmt.Println("TearDownSuite")
 	s.nsMonitorCancel()
 }
 
@@ -54,10 +52,10 @@ const (
 
 // SetupSuite runs all extensions
 func (s *Suite) SetupSuite() {
-	repo := "networkservicemesh/deployments-k8s"
+	repo := "NikitaSkrynnik/deployments-k8s"
 	version := sha[:8]
 
-	s.checkout.Version = version
+	s.checkout.Version = "parallel"
 
 	if strings.Contains(sha, "tags") {
 		s.checkout.Version = sha
