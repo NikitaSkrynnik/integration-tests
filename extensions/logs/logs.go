@@ -321,16 +321,15 @@ func monitorNamespaces(ctx context.Context, kubeClient kubernetes.Interface, sui
 					}
 					testdir := filepath.Join(suitedir, pod.Namespace)
 					if _, err := os.Stat(testdir); err != nil {
-						fmt.Printf("creting dir %v\n", testdir)
 						_ = os.MkdirAll(testdir, os.ModePerm)
 					}
 
-					collectCtx, collectCancel := context.WithCancel(ctx)
+					_, collectCancel := context.WithCancel(ctx)
 					podMap.Store(podKey, collectCancel)
 
-					for _, container := range pod.Spec.Containers {
-						go collectContainerLogs(collectCtx, kubeClient, pod, container.Name, testdir)
-					}
+					// for _, container := range pod.Spec.Containers {
+					// 	go collectContainerLogs(collectCtx, kubeClient, pod, container.Name, testdir)
+					// }
 
 				}
 			},
