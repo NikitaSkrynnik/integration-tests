@@ -132,4 +132,37 @@ func (s *Suite) TestRemote_nse_death_ip() {
 	r.Run(`kubectl exec pods/alpine -n ns-remote-nse-death-ip -- ping -c 4 172.16.1.102`)
 	r.Run(`kubectl exec ${NEW_NSE} -n ns-remote-nse-death-ip -- ping -c 4 172.16.1.103`)
 }
-
+func (s *Suite) TestSpire_agent_restart() {
+	r := s.Runner("../deployments-k8s/examples/heal/spire-agent-restart")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-spire-agent-restart`)
+	})
+	r.Run(`kubectl create ns ns-spire-agent-restart`)
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/spire-agent-restart?ref=af37254626d3d641d35b3fd0bc507aaf0a5ab3c4`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-spire-agent-restart`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-spire-agent-restart`)
+	r.Run(`kubectl exec pods/alpine -n ns-spire-agent-restart -- ping -c 4 172.16.1.100`)
+	r.Run(`kubectl exec deployments/nse-kernel -n ns-spire-agent-restart -- ping -c 4 172.16.1.101`)
+	r.Run(`AGENTS=$(kubectl get pods -l app=spire-agent -n spire --template '{{range .items}}{{.metadata.name}}{{" "}}{{end}}')`)
+	r.Run(`kubectl delete pod $AGENTS -n spire`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=spire-agent -n spire`)
+	r.Run(`kubectl exec pods/alpine -n ns-spire-agent-restart -- ping -c 4 172.16.1.100`)
+	r.Run(`kubectl exec deployments/nse-kernel -n ns-spire-agent-restart -- ping -c 4 172.16.1.101`)
+}
+func (s *Suite) TestLocal_forwarder_death() {
+	r := s.Runner("../deployments-k8s/examples/heal/local-forwarder-death")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-local-forwarder-death`)
+	})
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/local-forwarder-death?ref=af37254626d3d641d35b3fd0bc507aaf0a5ab3c4`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-local-forwarder-death`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-local-forwarder-death`)
+	r.Run(`kubectl exec pods/alpine -n ns-local-forwarder-death -- ping -c 4 172.16.1.100`)
+	r.Run(`kubectl exec deployments/nse-kernel -n ns-local-forwarder-death -- ping -c 4 172.16.1.101`)
+	r.Run(`NSC_NODE=$(kubectl get pods -l app=alpine -n ns-local-forwarder-death --template '{{range .items}}{{.spec.nodeName}}{{"\n"}}{{end}}')`)
+	r.Run(`FORWARDER=$(kubectl get pods -l app=forwarder-vpp --field-selector spec.nodeName==${NSC_NODE} -n nsm-system --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')`)
+	r.Run(`kubectl delete pod -n nsm-system ${FORWARDER}`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=forwarder-vpp --field-selector spec.nodeName==${NSC_NODE} -n nsm-system`)
+	r.Run(`kubectl exec pods/alpine -n ns-local-forwarder-death -- ping -c 4 172.16.1.100`)
+	r.Run(`kubectl exec deployments/nse-kernel -n ns-local-forwarder-death -- ping -c 4 172.16.1.101`)
+}
