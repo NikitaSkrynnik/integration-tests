@@ -78,26 +78,6 @@ func (s *Suite) TestRegistry_local_endpoint() {
 	r.Run(`kubectl exec pods/alpine -n ns-registry-local-endpoint -- ping -c 4 172.16.1.102`)
 	r.Run(`kubectl exec ${NEW_NSE} -n ns-registry-local-endpoint -- ping -c 4 172.16.1.103`)
 }
-func (s *Suite) TestRegistry_restart() {
-	r := s.Runner("../deployments-k8s/examples/heal/registry-restart")
-	s.T().Cleanup(func() {
-		r.Run(`kubectl delete ns ns-registry-restart`)
-	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/registry-restart/registry-before-death?ref=fa7f32d6b5d90ff767041a685a0ca6c95f60844d`)
-	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-registry-restart`)
-	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-registry-restart`)
-	r.Run(`NSC=$(kubectl get pods -l app=alpine -n ns-registry-restart --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')`)
-	r.Run(`NSE=$(kubectl get pods -l app=nse-kernel -n ns-registry-restart --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')`)
-	r.Run(`kubectl exec pods/alpine -n ns-registry-restart -- ping -c 4 172.16.1.100`)
-	r.Run(`kubectl exec deployments/nse-kernel -n ns-registry-restart -- ping -c 4 172.16.1.101`)
-	r.Run(`REGISTRY=$(kubectl get pods -l app=registry -n nsm-system --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')`)
-	r.Run(`kubectl delete pod ${REGISTRY} -n nsm-system`)
-	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=registry -n nsm-system`)
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/registry-restart/registry-after-death?ref=fa7f32d6b5d90ff767041a685a0ca6c95f60844d`)
-	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine-new -n ns-registry-restart`)
-	r.Run(`kubectl exec pods/alpine-new -n ns-registry-restart -- ping -c 4 172.16.1.102`)
-	r.Run(`kubectl exec deployments/nse-kernel -n ns-registry-restart -- ping -c 4 172.16.1.103`)
-}
 func (s *Suite) TestRemote_nse_death() {
 	r := s.Runner("../deployments-k8s/examples/heal/remote-nse-death")
 	s.T().Cleanup(func() {
@@ -165,4 +145,25 @@ func (s *Suite) TestLocal_forwarder_death() {
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=forwarder-vpp --field-selector spec.nodeName==${NSC_NODE} -n nsm-system`)
 	r.Run(`kubectl exec pods/alpine -n ns-local-forwarder-death -- ping -c 4 172.16.1.100`)
 	r.Run(`kubectl exec deployments/nse-kernel -n ns-local-forwarder-death -- ping -c 4 172.16.1.101`)
+}
+func (s *Suite) TestLocal_nsmgr_local_nse_memif() {
+	r := s.Runner("../deployments-k8s/examples/heal/local-nsmgr-local-nse-memif")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-local-nsmgr-local-nse-memif`)
+	})
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/local-nsmgr-local-nse-memif/nse-before-death?ref=af37254626d3d641d35b3fd0bc507aaf0a5ab3c4`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsc-memif -n ns-local-nsmgr-local-nse-memif`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-memif -n ns-local-nsmgr-local-nse-memif`)
+	r.Run(`result=$(kubectl exec deployments/nsc-memif -n ns-local-nsmgr-local-nse-memif -- vppctl ping 172.16.1.100 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
+	r.Run(`result=$(kubectl exec deployments/nse-memif -n ns-local-nsmgr-local-nse-memif -- vppctl ping 172.16.1.101 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
+	r.Run(`kubectl delete deployment nse-memif -n ns-local-nsmgr-local-nse-memif`)
+	r.Run(`NSC_NODE=$(kubectl get pods -l app=nsc-memif -n ns-local-nsmgr-local-nse-memif --template '{{range .items}}{{.spec.nodeName}}{{"\n"}}{{end}}')`)
+	r.Run(`NSMGR=$(kubectl get pods -l app=nsmgr --field-selector spec.nodeName==${NSC_NODE} -n nsm-system --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')`)
+	r.Run(`kubectl delete pod ${NSMGR} -n nsm-system`)
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/local-nsmgr-local-nse-memif/nse-after-death?ref=af37254626d3d641d35b3fd0bc507aaf0a5ab3c4`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsmgr --field-selector spec.nodeName==${NSC_NODE} -n nsm-system`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-memif -l version=new -n ns-local-nsmgr-local-nse-memif`)
+	r.Run(`NEW_NSE=$(kubectl get pods -l app=nse-memif -l version=new -n ns-local-nsmgr-local-nse-memif --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')`)
+	r.Run(`result=$(kubectl exec deployments/nsc-memif -n ns-local-nsmgr-local-nse-memif -- vppctl ping 172.16.1.102 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
+	r.Run(`result=$(kubectl exec "${NEW_NSE}" -n "ns-local-nsmgr-local-nse-memif" -- vppctl ping 172.16.1.103 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
 }
