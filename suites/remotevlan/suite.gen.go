@@ -41,10 +41,10 @@ func (s *Suite) SetupSuite() {
 }
 func (s *Suite) RunIncludedSuites() {
 	s.Run("Rvlanovs", func() {
-		parallel.Run(s.T(), &s.rvlanovsSuite)
+		parallel.Run(s.T(), &s.rvlanovsSuite, "TestKernel2rvlanbreakout")
 	})
 	s.Run("Rvlanvpp", func() {
-		parallel.Run(s.T(), &s.rvlanvppSuite)
+		parallel.Run(s.T(), &s.rvlanvppSuite, "TestKernel2rvlanbreakout")
 	})
 }
 func (s *Suite) Test() {}
