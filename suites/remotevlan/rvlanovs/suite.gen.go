@@ -34,7 +34,7 @@ func (s *Suite) TestKernel2rvlanbreakout() {
 		r.Run(`docker stop rvm-tester-breakout` + "\n" + `docker image rm rvm-tester-breakout:latest` + "\n" + `true`)
 		r.Run(`kubectl delete ns ns-kernel2rvlan-breakout`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Kernel2RVlanBreakout?ref=af37254626d3d641d35b3fd0bc507aaf0a5ab3c4`)
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Kernel2RVlanBreakout?ref=87c4069b0e35057f8f8f049237e9c15b2112cb3f`)
 	r.Run(`kubectl -n ns-kernel2rvlan-breakout wait --for=condition=ready --timeout=1m pod -l app=iperf1-s`)
 	r.Run(`NSCS=($(kubectl get pods -l app=iperf1-s -n ns-kernel2rvlan-breakout --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'))`)
 	r.Run(`cat > Dockerfile <<EOF` + "\n" + `FROM networkstatic/iperf3` + "\n" + `` + "\n" + `RUN apt-get update \` + "\n" + `    && apt-get install -y ethtool iproute2 \` + "\n" + `    && rm -rf /var/lib/apt/lists/*` + "\n" + `` + "\n" + `ENTRYPOINT [ "tail", "-f", "/dev/null" ]` + "\n" + `EOF` + "\n" + `docker build . -t rvm-tester-breakout`)

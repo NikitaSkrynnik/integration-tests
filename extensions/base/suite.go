@@ -54,7 +54,7 @@ const (
 // SetupSuite runs all extensions
 func (s *Suite) SetupSuite() {
 	repo := "NikitaSkrynnik/deployments-k8s"
-	version := "rvlan-parallel"
+	version := "87c4069"
 
 	s.checkout.Version = version
 
