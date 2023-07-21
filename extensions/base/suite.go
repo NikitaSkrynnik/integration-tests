@@ -53,8 +53,8 @@ const (
 
 // SetupSuite runs all extensions
 func (s *Suite) SetupSuite() {
-	repo := "networkservicemesh/deployments-k8s"
-	version := sha[:8]
+	repo := "NikitaSkrynnik/deployments-k8s"
+	version := "rvlan-parallel"
 
 	s.checkout.Version = version
 
@@ -78,6 +78,6 @@ func (s *Suite) SetupSuite() {
 		fmt.Sprintf("https://api.github.com/repos/%v/contents/apps?ref=%v", repo, version),
 	}
 
-	// s.prefetch.SetT(s.T())
-	// s.prefetch.SetupSuite()
+	s.prefetch.SetT(s.T())
+	s.prefetch.SetupSuite()
 }
