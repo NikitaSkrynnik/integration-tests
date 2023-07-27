@@ -145,9 +145,9 @@ func initialize() {
 			suitedir := filepath.Join(config.ArtifactsDir, fmt.Sprintf("cluster%v", i))
 			nsList, _ := client.CoreV1().Namespaces().List(ctx, v1.ListOptions{})
 
+			os.Setenv("KUBECONFIG", kubeConfigs[i])
 			_, _, exitCode, err := runner.Run(
-				fmt.Sprintf("kubectl --kubeconfig %v cluster-info dump --output-directory=%s --namespaces %s",
-					kubeConfigs[i],
+				fmt.Sprintf("kubectl cluster-info dump --output-directory=%s --namespaces %s",
 					suitedir,
 					strings.Join(filterNamespaces(nsList), ",")))
 
