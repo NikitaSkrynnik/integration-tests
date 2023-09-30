@@ -23,10 +23,10 @@ func (s *Suite) SetupSuite() {
 	}
 	r := s.Runner("../deployments-k8s/examples/interdomain/nsm")
 	s.T().Cleanup(func() {
-		r.Run(`WH=$(kubectl --kubeconfig=$KUBECONFIG1 get pods -l app=admission-webhook-k8s -n nsm-system --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')` + "\n" + `kubectl --kubeconfig=$KUBECONFIG1 delete mutatingwebhookconfiguration ${WH}` + "\n" + `` + "\n" + `WH=$(kubectl --kubeconfig=$KUBECONFIG2 get pods -l app=admission-webhook-k8s -n nsm-system --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')` + "\n" + `kubectl --kubeconfig=$KUBECONFIG2 delete mutatingwebhookconfiguration ${WH}` + "\n" + `` + "\n" + `kubectl --kubeconfig=$KUBECONFIG1 delete -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/interdomain/nsm/cluster1` + "\n" + `kubectl --kubeconfig=$KUBECONFIG2 delete -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/interdomain/nsm/cluster2`)
+		r.Run(`WH=$(kubectl --kubeconfig=$KUBECONFIG1 get pods -l app=admission-webhook-k8s -n nsm-system --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')` + "\n" + `kubectl --kubeconfig=$KUBECONFIG1 delete mutatingwebhookconfiguration ${WH}` + "\n" + `` + "\n" + `WH=$(kubectl --kubeconfig=$KUBECONFIG2 get pods -l app=admission-webhook-k8s -n nsm-system --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')` + "\n" + `kubectl --kubeconfig=$KUBECONFIG2 delete mutatingwebhookconfiguration ${WH}` + "\n" + `` + "\n" + `kubectl --kubeconfig=$KUBECONFIG1 delete -k ../../../examples/interdomain/nsm/cluster1` + "\n" + `kubectl --kubeconfig=$KUBECONFIG2 delete -k ../../../examples/interdomain/nsm/cluster2`)
 	})
-	r.Run(`kubectl --kubeconfig=$KUBECONFIG1 apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/interdomain/nsm/cluster1`)
-	r.Run(`kubectl --kubeconfig=$KUBECONFIG2 apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/interdomain/nsm/cluster2`)
+	r.Run(`kubectl --kubeconfig=$KUBECONFIG1 apply -k ../../../examples/interdomain/nsm/cluster1`)
+	r.Run(`kubectl --kubeconfig=$KUBECONFIG2 apply -k ../../../examples/interdomain/nsm/cluster2`)
 	r.Run(`kubectl --kubeconfig=$KUBECONFIG1 wait --for=condition=ready --timeout=1m pod -n nsm-system -l app=admission-webhook-k8s`)
 	r.Run(`kubectl --kubeconfig=$KUBECONFIG2 wait --for=condition=ready --timeout=1m pod -n nsm-system -l app=admission-webhook-k8s`)
 }
