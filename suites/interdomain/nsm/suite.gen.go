@@ -23,10 +23,10 @@ func (s *Suite) SetupSuite() {
 	}
 	r := s.Runner("../deployments-k8s/examples/interdomain/nsm")
 	s.T().Cleanup(func() {
-		r.Run(`kubectl --kubeconfig=$KUBECONFIG1 delete -k ../../../examples/interdomain/nsm/cluster1` + "\n" + `kubectl --kubeconfig=$KUBECONFIG2 delete -k ../../../examples/interdomain/nsm/cluster2`)
+		r.Run(`kubectl --kubeconfig=$KUBECONFIG1 delete -k https://github.com/networkservicemesh/deployments-k8s/examples/interdomain/nsm/cluster1?ref=b9b6089539c6ba92f34cb317b7c1a59f4ce33cee` + "\n" + `kubectl --kubeconfig=$KUBECONFIG2 delete -k https://github.com/networkservicemesh/deployments-k8s/examples/interdomain/nsm/cluster2?ref=b9b6089539c6ba92f34cb317b7c1a59f4ce33cee`)
 	})
-	r.Run(`kubectl --kubeconfig=$KUBECONFIG1 apply -k ../../../examples/interdomain/nsm/cluster1`)
-	r.Run(`kubectl --kubeconfig=$KUBECONFIG2 apply -k ../../../examples/interdomain/nsm/cluster2`)
+	r.Run(`kubectl --kubeconfig=$KUBECONFIG1 apply -k https://github.com/networkservicemesh/deployments-k8s/examples/interdomain/nsm/cluster1?ref=b9b6089539c6ba92f34cb317b7c1a59f4ce33cee`)
+	r.Run(`kubectl --kubeconfig=$KUBECONFIG2 apply -k https://github.com/networkservicemesh/deployments-k8s/examples/interdomain/nsm/cluster2?ref=b9b6089539c6ba92f34cb317b7c1a59f4ce33cee`)
 	r.Run(`kubectl --kubeconfig=$KUBECONFIG1 wait --for=condition=ready --timeout=1m pod -n nsm-system -l app=admission-webhook-k8s`)
 	r.Run(`kubectl --kubeconfig=$KUBECONFIG2 wait --for=condition=ready --timeout=1m pod -n nsm-system -l app=admission-webhook-k8s`)
 }
