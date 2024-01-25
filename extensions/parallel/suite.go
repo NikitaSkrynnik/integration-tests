@@ -110,7 +110,7 @@ func newTest(t *testing.T, s suite.TestingSuite, methodFinder reflect.Type, meth
 				r := recover()
 
 				if afterTestSuite, ok := subS.Interface().(suite.AfterTest); ok {
-					afterTestSuite.AfterTest(methodFinder.Elem().Name(), method.Name)
+					afterTestSuite.AfterTest(s.T().Name(), method.Name)
 				}
 
 				if tearDownTestSuite, ok := subS.Interface().(suite.TearDownTestSuite); ok {

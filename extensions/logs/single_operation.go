@@ -28,7 +28,7 @@ const (
 )
 
 type singleOperation struct {
-	body  func()
+	Body  func()
 	state int32
 }
 
@@ -43,7 +43,7 @@ func newSingleOperation(body func()) *singleOperation {
 	if body == nil {
 		panic("body can not be nil")
 	}
-	return &singleOperation{body: body, state: notScheduled}
+	return &singleOperation{Body: body, state: notScheduled}
 }
 
 func (o *singleOperation) Run() {
@@ -56,10 +56,9 @@ func (o *singleOperation) Run() {
 			return
 		}
 	}
-
-	o.body()
+	o.Body()
 	if !atomic.CompareAndSwapInt32(&o.state, running, notScheduled) {
-		o.body()
+		o.Body()
 		atomic.StoreInt32(&o.state, notScheduled)
 	}
 }

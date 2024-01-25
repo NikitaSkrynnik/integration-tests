@@ -38,13 +38,12 @@ type Suite struct {
 }
 
 // AfterTest stores logs after each test in the suite.
-func (s *Suite) AfterTest(_, _ string) {
-	logs.ClusterDump()
+func (s *Suite) AfterTest(s1, s2 string) {
+	logs.ClusterDump(s1)
 }
 
 // TearDownSuite stores logs from containers that spawned during SuiteSetup.
 func (s *Suite) TearDownSuite() {
-	logs.ClusterDump()
 }
 
 // SetupSuite runs all extensions

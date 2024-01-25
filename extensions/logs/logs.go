@@ -42,9 +42,11 @@ var (
 	config                     Config
 	ctx                        context.Context
 	kubeConfigs                []string
-	matchRegex                 *regexp.Regexp
+	testNamespacesMatchRegex   *regexp.Regexp
+	nsmSystemMatchRegex        *regexp.Regexp
 	runner                     *bash.Bash
 	clusterDumpSingleOperation *singleOperation
+	nsmSystemNumber            int
 )
 
 // Config is env config to setup log collecting.
@@ -53,7 +55,8 @@ type Config struct {
 	Timeout              time.Duration `default:"10s" desc:"Context timeout for kubernetes queries" split_words:"true"`
 	WorkerCount          int           `default:"8" desc:"Number of log collector workers" split_words:"true"`
 	MaxKubeConfigs       int           `default:"3" desc:"Number of used kubeconfigs" split_words:"true"`
-	AllowedNamespaces    string        `default:"(ns-.*)|(nsm-system)|(spire)|(observability)" desc:"Regex of allowed namespaces" split_words:"true"`
+	TestNamespaces       string        `default:"ns-.*" desc:"Regex of allowed namespaces" split_words:"true"`
+	NsmSystemNamespace   string        `default:"(nsm-system)|(spire)|(observability)" desc:"Regex of allowed namespaces" split_words:"true"`
 	LogCollectionEnabled bool          `default:"true" desc:"Boolean variable which enables log collection" split_words:"true"`
 }
 
@@ -67,7 +70,8 @@ func initialize() {
 		logrus.Fatal(err.Error())
 	}
 
-	matchRegex = regexp.MustCompile(config.AllowedNamespaces)
+	testNamespacesMatchRegex = regexp.MustCompile(config.TestNamespaces)
+	nsmSystemMatchRegex = regexp.MustCompile(config.NsmSystemNamespace)
 
 	var singleClusterKubeConfig = os.Getenv("KUBECONFIG")
 
@@ -98,45 +102,57 @@ func initialize() {
 		syscall.SIGQUIT,
 	)
 
-	clusterDumpSingleOperation = newSingleOperation(func() {
-		if ctx.Err() != nil {
-			return
-		}
-		for i := range kubeConfigs {
-			suitedir := filepath.Join(config.ArtifactsDir, fmt.Sprintf("cluster%v", i))
-
-			nsString, _, _, _ := runner.Run(fmt.Sprintf(`kubectl --kubeconfig %v get ns -o go-template='{{range .items}}{{ .metadata.name }} {{end}}'`, kubeConfigs[i]))
-			nsList := strings.Split(nsString, " ")
-
-			_, _, exitCode, err := runner.Run(fmt.Sprintf("kubectl --kubeconfig %v cluster-info dump --output-directory=%s --namespaces %s",
-				kubeConfigs[i],
-				suitedir,
-				strings.Join(filterNamespaces(nsList), ",")))
-
-			if exitCode != 0 {
-				logrus.Errorf("An error while getting cluster dump. Exit Code: %v", exitCode)
-			}
-			if err != nil {
-				logrus.Errorf("An error while getting cluster dump. Error: %s", err.Error())
-			}
-		}
-	})
+	clusterDumpSingleOperation = newSingleOperation(func() {})
+	nsmSystemNumber = 0
 }
 
 // ClusterDump saves logs from all pods in specified namespaces
-func ClusterDump() {
+func ClusterDump(folder string) {
 	once.Do(initialize)
+
+	clusterDumpSingleOperation.Body = func() {
+		if ctx.Err() != nil {
+			return
+		}
+		nsmSystemNumber++
+		for i := range kubeConfigs {
+			nsString, _, _, _ := runner.Run(fmt.Sprintf(`kubectl --kubeconfig %v get ns -o go-template='{{range .items}}{{ .metadata.name }} {{end}}'`, kubeConfigs[i]))
+			nsList := strings.Split(nsString, " ")
+
+			fmt.Printf("nsList: %v\n", nsList)
+
+			dir := filepath.Join(config.ArtifactsDir, fmt.Sprintf("cluster%v", i), folder)
+			runClusterDump(kubeConfigs[i], dir, strings.Join(filterNamespaces(nsList, testNamespacesMatchRegex), ","))
+
+			dir = filepath.Join(dir, fmt.Sprintf("nsm-system%d", nsmSystemNumber))
+			runClusterDump(kubeConfigs[i], dir, strings.Join(filterNamespaces(nsList, nsmSystemMatchRegex), ","))
+		}
+	}
 	clusterDumpSingleOperation.Run()
 }
 
-func filterNamespaces(nsList []string) []string {
+func runClusterDump(kubeConfig, suitedir, nsList string) (int, error) {
+	_, _, exitCode, err := runner.Run(
+		fmt.Sprintf("kubectl --kubeconfig %v cluster-info dump --output-directory=%s --namespaces %s",
+			kubeConfig,
+			suitedir,
+			nsList))
+
+	return exitCode, err
+}
+
+func filterNamespaces(nsList []string, matchRegex *regexp.Regexp) []string {
 	result := make([]string, 0)
 
 	for i := range nsList {
 		if matchRegex.MatchString(nsList[i]) {
+			fmt.Printf("Added to nsList: %s\n", nsList[i])
 			result = append(result, nsList[i])
 		}
 	}
 
+	fmt.Println()
+	fmt.Println()
+	fmt.Println()
 	return result
 }
