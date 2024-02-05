@@ -27,6 +27,7 @@ import (
 	"github.com/networkservicemesh/integration-tests/extensions/checkout"
 	"github.com/networkservicemesh/integration-tests/extensions/logs"
 	"github.com/networkservicemesh/integration-tests/extensions/prefetch"
+	"github.com/sirupsen/logrus"
 )
 
 // Suite is a base suite for generating tests. Contains extensions that can be used for assertion and automation goals.
@@ -39,9 +40,14 @@ type Suite struct {
 
 // AfterTest stores logs after each test in the suite.
 func (s *Suite) AfterTest(suiteName, testName string) {
+	logrus.Infof("AfterTest: begin")
 	if s.T().Failed() {
+		logrus.Infof("AfterTest: failed")
 		logs.ClusterDump(suiteName, testName)
+		logrus.Infof("AfterTest: clusterdump completed")
 	}
+
+	logrus.Infof("AfterTest: end")
 }
 
 // TearDownSuite stores logs from containers that spawned during SuiteSetup.
@@ -75,6 +81,6 @@ func (s *Suite) SetupSuite() {
 		fmt.Sprintf("https://api.github.com/repos/%v/contents/apps?ref=%v", repo, version),
 	}
 
-	s.prefetch.SetT(s.T())
-	s.prefetch.SetupSuite()
+	//s.prefetch.SetT(s.T())
+	//s.prefetch.SetupSuite()
 }
