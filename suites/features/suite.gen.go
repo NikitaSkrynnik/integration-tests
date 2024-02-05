@@ -214,6 +214,19 @@ func (s *Suite) TestMutually_aware_nses() {
 	r.Run(`result=$(kubectl exec deployments/nsc-kernel -n ns-mutually-aware-nses -- ip r get 172.16.1.100 from 172.16.1.101 ipproto tcp dport 6666)` + "\n" + `echo ${result}` + "\n" + `echo ${result} | grep -E -q "172.16.1.100 from 172.16.1.101 dev nsm-1"`)
 	r.Run(`result=$(kubectl exec deployments/nsc-kernel -n ns-mutually-aware-nses -- ip r get 172.16.1.100 from 172.16.1.101 ipproto udp dport 5555)` + "\n" + `echo ${result}` + "\n" + `echo ${result} | grep -E -q "172.16.1.100 from 172.16.1.101 dev nsm-2"`)
 }
+func (s *Suite) TestNse_composition() {
+	r := s.Runner("../deployments-k8s/examples/features/nse-composition")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-nse-composition`)
+	})
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/features/nse-composition?ref=3d335d02f3a25e405982fe26953713c72a37582d`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=5m pod -l app=alpine -n ns-nse-composition`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-nse-composition`)
+	r.Run(`kubectl exec pods/alpine -n ns-nse-composition -- ping -c 4 172.16.1.100`)
+	r.Run(`kubectl exec pods/alpine -n ns-nse-composition -- wget -O /dev/null --timeout 5 "172.16.1.100:8080"`)
+	r.Run(`kubectl exec pods/alpine -n ns-nse-composition -- wget -O /dev/null --timeout 5 "172.16.1.100:80"` + "\n" + `if [ 0 -eq $? ]; then` + "\n" + `  echo "error: port :80 is available" >&2` + "\n" + `  false` + "\n" + `else` + "\n" + `  echo "success: port :80 is unavailable"` + "\n" + `fi`)
+	r.Run(`kubectl exec deployments/nse-kernel -n ns-nse-composition -- ping -c 4 172.16.1.101`)
+}
 func (s *Suite) TestOpa() {
 	r := s.Runner("../deployments-k8s/examples/features/opa")
 	s.T().Cleanup(func() {
@@ -239,6 +252,111 @@ func (s *Suite) TestPolicy_based_routing() {
 	r.Run(`result=$(kubectl exec pods/nettools -n ns-policy-based-routing -- ip r get 172.16.4.1 ipproto udp dport 6666)` + "\n" + `echo ${result}` + "\n" + `echo ${result} | grep -E -q "172.16.4.1 dev nsm-1 table 3 src 172.16.1.101"`)
 	r.Run(`result=$(kubectl exec pods/nettools -n ns-policy-based-routing -- ip r get 172.16.4.1 ipproto udp dport 6668)` + "\n" + `echo ${result}` + "\n" + `echo ${result} | grep -E -q "172.16.4.1 dev nsm-1 table 4 src 172.16.1.101"`)
 	r.Run(`result=$(kubectl exec pods/nettools -n ns-policy-based-routing -- ip -6 route get 2004::5 from 2004::3 ipproto udp dport 5555)` + "\n" + `echo ${result}` + "\n" + `echo ${result} | grep -E -q "via 2004::6 dev nsm-1 table 5 src 2004::3"`)
+}
+func (s *Suite) TestScale_from_zero() {
+	r := s.Runner("../deployments-k8s/examples/features/scale-from-zero")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-scale-from-zero`)
+	})
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/features/scale-from-zero?ref=3d335d02f3a25e405982fe26953713c72a37582d`)
+	r.Run(`kubectl wait -n ns-scale-from-zero --for=condition=ready --timeout=1m pod -l app=nse-supplier-k8s`)
+	r.Run(`kubectl wait -n ns-scale-from-zero --for=condition=ready --timeout=1m pod -l app=alpine`)
+	r.Run(`kubectl wait -n ns-scale-from-zero --for=condition=ready --timeout=1m pod -l app=nse-icmp-responder`)
+	r.Run(`NSE=$(kubectl get pod -n ns-scale-from-zero --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' -l app=nse-icmp-responder)`)
+	r.Run(`kubectl exec pods/alpine -n ns-scale-from-zero -- ping -c 4 169.254.0.0`)
+	r.Run(`kubectl exec $NSE -n ns-scale-from-zero -- ping -c 4 169.254.0.1`)
+	r.Run(`NSE_NODE=$(kubectl get pod -n ns-scale-from-zero --template '{{range .items}}{{.spec.nodeName}}{{"\n"}}{{end}}' -l app=nse-icmp-responder)` + "\n" + `NSC_NODE=$(kubectl get pod -n ns-scale-from-zero --template '{{range .items}}{{.spec.nodeName}}{{"\n"}}{{end}}' -l app=alpine)`)
+	r.Run(`if [ $NSC_NODE == $NSE_NODE ]; then echo "OK"; else echo "different nodes"; false; fi`)
+	r.Run(`kubectl delete pod -n ns-scale-from-zero alpine`)
+	r.Run(`kubectl wait -n ns-scale-from-zero --for=delete --timeout=1m pod -l app=nse-icmp-responder`)
+}
+func (s *Suite) TestScaled_registry() {
+	r := s.Runner("../deployments-k8s/examples/features/scaled-registry")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-scaled-registry`)
+		r.Run(`kubectl scale --replicas=1 deployments/registry-k8s -n nsm-system`)
+	})
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/features/scaled-registry?ref=3d335d02f3a25e405982fe26953713c72a37582d`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-scaled-registry`)
+	r.Run(`NSE=$(kubectl get pod -n ns-scaled-registry --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' -l app=nse-kernel)`)
+	r.Run(`kubectl get nses -A | grep $NSE`)
+	r.Run(`kubectl scale --replicas=0 deployments/registry-k8s -n nsm-system`)
+	r.Run(`kubectl wait --for=delete --timeout=1m pod -l app=registry -n nsm-system`)
+	r.Run(`kubectl get nses -A | grep $NSE`)
+	r.Run(`kubectl scale --replicas=2 deployments/registry-k8s -n nsm-system`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=registry -n nsm-system`)
+	r.Run(`kubectl scale --replicas=0 deployments/nse-kernel -n ns-scaled-registry`)
+	r.Run(`kubectl get nses -A | grep $NSE` + "\n" + `if [[ "$?" == "1" ]]; then echo OK; else echo "nse entry still exists"; false; fi`)
+}
+func (s *Suite) TestSelect_forwarder() {
+	r := s.Runner("../deployments-k8s/examples/features/select-forwarder")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-select-forwarder`)
+	})
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/features/select-forwarder?ref=3d335d02f3a25e405982fe26953713c72a37582d`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-select-forwarder`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-select-forwarder`)
+	r.Run(`kubectl exec pods/alpine -n ns-select-forwarder -- ping -c 4 169.254.0.0`)
+	r.Run(`kubectl exec deployments/nse-kernel -n ns-select-forwarder -- ping -c 4 169.254.0.1`)
+	r.Run(`kubectl logs pods/alpine -c cmd-nsc -n ns-select-forwarder | grep "my-forwarder-vpp"`)
+}
+func (s *Suite) TestVl3_basic() {
+	r := s.Runner("../deployments-k8s/examples/features/vl3-basic")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-vl3`)
+	})
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/features/vl3-basic?ref=3d335d02f3a25e405982fe26953713c72a37582d`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=2m pod -l app=alpine -n ns-vl3`)
+	r.Run(`nscs=$(kubectl  get pods -l app=alpine -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}" -n ns-vl3)` + "\n" + `[[ ! -z $nscs ]]`)
+	r.Run(`(` + "\n" + `for nsc in $nscs ` + "\n" + `do` + "\n" + `    ipAddr=$(kubectl exec -n ns-vl3 $nsc -- ifconfig nsm-1) || exit` + "\n" + `    ipAddr=$(echo $ipAddr | grep -Eo 'inet addr:[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}'| cut -c 11-)` + "\n" + `    for pinger in $nscs` + "\n" + `    do` + "\n" + `        echo $pinger pings $ipAddr` + "\n" + `        kubectl exec $pinger -n ns-vl3 -- ping -c2 -i 0.5 $ipAddr || exit` + "\n" + `    done` + "\n" + `done` + "\n" + `)`)
+	r.Run(`(` + "\n" + `for nsc in $nscs ` + "\n" + `do` + "\n" + `    echo $nsc pings nses` + "\n" + `    kubectl exec -n ns-vl3 $nsc -- ping 172.16.0.0 -c2 -i 0.5 || exit` + "\n" + `    kubectl exec -n ns-vl3 $nsc -- ping 172.16.1.0 -c2 -i 0.5 || exit` + "\n" + `done` + "\n" + `)`)
+}
+func (s *Suite) TestVl3_dns() {
+	r := s.Runner("../deployments-k8s/examples/features/vl3-dns")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-vl3-dns`)
+	})
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/features/vl3-dns?ref=3d335d02f3a25e405982fe26953713c72a37582d`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=2m pod -l app=alpine -n ns-vl3-dns`)
+	r.Run(`nscs=$(kubectl  get pods -l app=alpine -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}" -n ns-vl3-dns)` + "\n" + `[[ ! -z $nscs ]]`)
+	r.Run(`(` + "\n" + `for nsc in $nscs` + "\n" + `do` + "\n" + `    for pinger in $nscs` + "\n" + `    do` + "\n" + `        kubectl exec $pinger -n ns-vl3-dns -- ping -c2 -i 0.5 $nsc.vl3-dns -4 || exit` + "\n" + `    done` + "\n" + `done` + "\n" + `)`)
+	r.Run(`(` + "\n" + `for nsc in $nscs` + "\n" + `do` + "\n" + `    for pinger in $nscs` + "\n" + `    do` + "\n" + `        # Get IP address for PTR request` + "\n" + `        nscAddr=$(kubectl exec $pinger -n ns-vl3-dns -- nslookup -type=a $nsc.vl3-dns | grep -A1 Name | tail -n1 | sed 's/Address: //')` + "\n" + `        kubectl exec $pinger -n ns-vl3-dns -- nslookup $nscAddr || exit` + "\n" + `    done` + "\n" + `done` + "\n" + `)`)
+	r.Run(`nses=$(kubectl get pods -l app=nse-vl3-vpp -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}" -n ns-vl3-dns)` + "\n" + `[[ ! -z nses ]]`)
+	r.Run(`(` + "\n" + `for nse in $nses` + "\n" + `do` + "\n" + `    for pinger in $nscs` + "\n" + `    do` + "\n" + `        kubectl exec $pinger -n ns-vl3-dns -- ping -c2 -i 0.5 $nse.vl3-dns -4 || exit` + "\n" + `    done` + "\n" + `done` + "\n" + `)`)
+	r.Run(`(` + "\n" + `for nse in $nses` + "\n" + `do` + "\n" + `    for pinger in $nscs` + "\n" + `    do` + "\n" + `        # Get IP address for PTR request` + "\n" + `        nseAddr=$(kubectl exec $pinger -n ns-vl3-dns -- nslookup -type=a $nse.vl3-dns | grep -A1 Name | tail -n1 | sed 's/Address: //')` + "\n" + `        kubectl exec $pinger -n ns-vl3-dns -- nslookup $nseAddr || exit` + "\n" + `    done` + "\n" + `done` + "\n" + `)`)
+}
+func (s *Suite) TestVl3_ipv6() {
+	r := s.Runner("../deployments-k8s/examples/features/vl3-ipv6")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-vl3-ipv6`)
+	})
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/features/vl3-ipv6?ref=3d335d02f3a25e405982fe26953713c72a37582d`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=2m pod -l app=alpine -n ns-vl3-ipv6`)
+	r.Run(`nscs=($(kubectl get pods -n ns-vl3-ipv6 -l app=alpine -o jsonpath='{.items[*].metadata.name}'))`)
+	r.Run(`for nsc in "${nscs[@]}";` + "\n" + `do` + "\n" + `    ipAddr=$(kubectl exec -n ns-vl3-ipv6 $nsc -- ifconfig nsm-1) || exit` + "\n" + `    ipAddr=$(echo $ipAddr | grep -Eo 'inet6 addr: 2001:.*' | cut -d ' ' -f 3 | cut -d '/' -f 1)` + "\n" + `    for pinger in "${nscs[@]}";` + "\n" + `    do` + "\n" + `        echo $pinger pings $ipAddr` + "\n" + `        kubectl exec $pinger -n ns-vl3-ipv6 -- ping6 -c2 -i 0.5 $ipAddr || exit` + "\n" + `    done` + "\n" + `done`)
+	r.Run(`for nsc in "${nscs[@]}";` + "\n" + `do` + "\n" + `    echo $nsc pings nses` + "\n" + `    kubectl exec -n ns-vl3-ipv6 $nsc -- ping6 2001:db8::1 -c2 -i 0.5 || exit` + "\n" + `    kubectl exec -n ns-vl3-ipv6 $nsc -- ping6 2001:db8::1:1 -c2 -i 0.5 || exit` + "\n" + `done`)
+}
+func (s *Suite) TestVl3_lb() {
+	r := s.Runner("../deployments-k8s/examples/features/vl3-lb")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-vl3-lb`)
+	})
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/features/vl3-lb?ref=3d335d02f3a25e405982fe26953713c72a37582d`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=2m pod -l type=vl3-client -n ns-vl3-lb`)
+	r.Run(`kubectl exec deployments/finance-client -n ns-vl3-lb -- curl -s finance.vl3-lb:8080 | grep "Hello! I'm finance-server"`)
+}
+func (s *Suite) TestVl3_scale_from_zero() {
+	r := s.Runner("../deployments-k8s/examples/features/vl3-scale-from-zero")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-vl3-scale-from-zero`)
+	})
+	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/features/vl3-scale-from-zero?ref=3d335d02f3a25e405982fe26953713c72a37582d`)
+	r.Run(`kubectl wait -n ns-vl3-scale-from-zero --for=condition=ready --timeout=1m pod -l app=nse-supplier-k8s`)
+	r.Run(`kubectl wait -n ns-vl3-scale-from-zero --for=condition=ready --timeout=1m pod -l app=alpine`)
+	r.Run(`kubectl wait -n ns-vl3-scale-from-zero --for=condition=ready --timeout=1m pod -l app=nse-vl3-vpp`)
+	r.Run(`nscs=$(kubectl  get pods -l app=alpine -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}" -n ns-vl3-scale-from-zero)` + "\n" + `[[ ! -z $nscs ]]`)
+	r.Run(`(` + "\n" + `for nsc in $nscs ` + "\n" + `do` + "\n" + `    ipAddr=$(kubectl exec -n ns-vl3-scale-from-zero $nsc -- ifconfig nsm-1) || exit` + "\n" + `    ipAddr=$(echo $ipAddr | grep -Eo 'inet addr:[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}'| cut -c 11-)` + "\n" + `    for pinger in $nscs` + "\n" + `    do` + "\n" + `        echo $pinger pings $ipAddr` + "\n" + `        kubectl exec $pinger -n ns-vl3-scale-from-zero -- ping -c2 -i 0.5 $ipAddr || exit` + "\n" + `    done` + "\n" + `done` + "\n" + `)`)
+	r.Run(`(` + "\n" + `for nsc in $nscs ` + "\n" + `do` + "\n" + `    echo $nsc pings nses` + "\n" + `    kubectl exec -n ns-vl3-scale-from-zero $nsc -- ping 172.16.0.0 -c2 -i 0.5 || exit` + "\n" + `    kubectl exec -n ns-vl3-scale-from-zero $nsc -- ping 172.16.1.0 -c2 -i 0.5 || exit` + "\n" + `done` + "\n" + `)`)
 }
 func (s *Suite) TestWebhook() {
 	r := s.Runner("../deployments-k8s/examples/features/webhook")
