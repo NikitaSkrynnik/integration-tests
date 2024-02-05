@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -107,12 +108,15 @@ func newTest(t *testing.T, s suite.TestingSuite, methodFinder reflect.Type, meth
 			subS.MethodByName("SetT").Call([]reflect.Value{reflect.ValueOf(testingT)})
 
 			defer func() {
+				logrus.Infof("Test: Recover")
 				r := recover()
+				logrus.Infof("Test: After Test")
 
 				if afterTestSuite, ok := subS.Interface().(suite.AfterTest); ok {
 					afterTestSuite.AfterTest(s.T().Name(), method.Name)
 				}
 
+				logrus.Infof("Test: TearDown Test")
 				if tearDownTestSuite, ok := subS.Interface().(suite.TearDownTestSuite); ok {
 					tearDownTestSuite.TearDownTest()
 				}
