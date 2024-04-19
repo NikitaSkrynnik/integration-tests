@@ -29,7 +29,7 @@ func (s *Suite) TestLocal_forwarder_death() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-local-forwarder-death`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/local-forwarder-death?ref=89c1b4246f503c6f6ccc1daa53cb20d872b49e24`)
+	r.Run(`kubectl apply -k ../../../../../../../../../Users/user/repos/NSM/deployments-k8s/examples/heal/local-forwarder-death`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-local-forwarder-death`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-local-forwarder-death`)
 	r.Run(`kubectl exec pods/alpine -n ns-local-forwarder-death -- ping -c 4 172.16.1.100`)
@@ -46,7 +46,7 @@ func (s *Suite) TestLocal_forwarder_remote_forwarder() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-local-forwarder-remote-forwarder`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/local-forwarder-remote-forwarder?ref=89c1b4246f503c6f6ccc1daa53cb20d872b49e24`)
+	r.Run(`kubectl apply -k ../../../../../../../../../Users/user/repos/NSM/deployments-k8s/examples/heal/local-forwarder-remote-forwarder`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-local-forwarder-remote-forwarder`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-local-forwarder-remote-forwarder`)
 	r.Run(`kubectl exec pods/alpine -n ns-local-forwarder-remote-forwarder -- ping -c 4 172.16.1.100`)
@@ -66,7 +66,7 @@ func (s *Suite) TestLocal_nsmgr_restart() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-local-nsmgr-restart`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/local-nsmgr-restart?ref=89c1b4246f503c6f6ccc1daa53cb20d872b49e24`)
+	r.Run(`kubectl apply -k ../../../../../../../../../Users/user/repos/NSM/deployments-k8s/examples/heal/local-nsmgr-restart`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-local-nsmgr-restart`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-local-nsmgr-restart`)
 	r.Run(`kubectl exec pods/alpine -n ns-local-nsmgr-restart -- ping -c 4 172.16.1.100`)
@@ -83,7 +83,7 @@ func (s *Suite) TestRegistry_remote_forwarder() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-registry-remote-forwarder`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/registry-remote-forwarder?ref=89c1b4246f503c6f6ccc1daa53cb20d872b49e24`)
+	r.Run(`kubectl apply -k ../../../../../../../../../Users/user/repos/NSM/deployments-k8s/examples/heal/registry-remote-forwarder`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-registry-remote-forwarder`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-registry-remote-forwarder`)
 	r.Run(`kubectl exec pods/alpine -n ns-registry-remote-forwarder -- ping -c 4 172.16.1.100`)
@@ -103,7 +103,7 @@ func (s *Suite) TestRegistry_restart() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-registry-restart`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/registry-restart/registry-before-death?ref=89c1b4246f503c6f6ccc1daa53cb20d872b49e24`)
+	r.Run(`kubectl apply -k ../../../../../../../../../Users/user/repos/NSM/deployments-k8s/examples/heal/registry-restart/registry-before-death`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-registry-restart`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-registry-restart`)
 	r.Run(`NSC=$(kubectl get pods -l app=alpine -n ns-registry-restart --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')`)
@@ -113,7 +113,7 @@ func (s *Suite) TestRegistry_restart() {
 	r.Run(`REGISTRY=$(kubectl get pods -l app=registry -n nsm-system --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')`)
 	r.Run(`kubectl delete pod ${REGISTRY} -n nsm-system`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=registry -n nsm-system`)
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/registry-restart/registry-after-death?ref=89c1b4246f503c6f6ccc1daa53cb20d872b49e24`)
+	r.Run(`kubectl apply -k ../../../../../../../../../Users/user/repos/NSM/deployments-k8s/examples/heal/registry-restart/registry-after-death`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine-new -n ns-registry-restart`)
 	r.Run(`kubectl exec pods/alpine-new -n ns-registry-restart -- ping -c 4 172.16.1.102`)
 	r.Run(`kubectl exec deployments/nse-kernel -n ns-registry-restart -- ping -c 4 172.16.1.103`)
@@ -123,7 +123,7 @@ func (s *Suite) TestRemote_forwarder_death() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-remote-forwarder-death`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/remote-forwarder-death?ref=89c1b4246f503c6f6ccc1daa53cb20d872b49e24`)
+	r.Run(`kubectl apply -k ../../../../../../../../../Users/user/repos/NSM/deployments-k8s/examples/heal/remote-forwarder-death`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-remote-forwarder-death`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-remote-forwarder-death`)
 	r.Run(`kubectl exec pods/alpine -n ns-remote-forwarder-death -- ping -c 4 172.16.1.100`)
@@ -140,7 +140,7 @@ func (s *Suite) TestRemote_forwarder_death_ip() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-remote-forwarder-death-ip`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/heal/remote-forwarder-death-ip?ref=89c1b4246f503c6f6ccc1daa53cb20d872b49e24`)
+	r.Run(`kubectl apply -k ../../../../../../../../../Users/user/repos/NSM/deployments-k8s/examples/heal/remote-forwarder-death-ip`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-remote-forwarder-death-ip`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-remote-forwarder-death-ip`)
 	r.Run(`kubectl exec pods/alpine -n ns-remote-forwarder-death-ip -- ping -c 4 172.16.1.100`)
