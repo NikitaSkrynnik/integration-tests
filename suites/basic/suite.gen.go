@@ -27,7 +27,7 @@ func (s *Suite) SetupSuite() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete mutatingwebhookconfiguration nsm-mutating-webhook` + "\n" + `kubectl delete ns nsm-system`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/basic?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/basic`)
 	r.Run(`WH=$(kubectl get pods -l app=admission-webhook-k8s -n nsm-system --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}')` + "\n" + `kubectl wait --for=condition=ready --timeout=1m pod ${WH} -n nsm-system`)
 }
 func (s *Suite) TestKernel2Ethernet2Kernel() {
@@ -35,7 +35,7 @@ func (s *Suite) TestKernel2Ethernet2Kernel() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-kernel2ethernet2kernel`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Kernel2Ethernet2Kernel?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/Kernel2Ethernet2Kernel`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-kernel2ethernet2kernel`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-kernel2ethernet2kernel`)
 	r.Run(`kubectl exec pods/alpine -n ns-kernel2ethernet2kernel -- ping -c 4 172.16.1.100`)
@@ -46,7 +46,7 @@ func (s *Suite) TestKernel2Ethernet2Memif() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-kernel2ethernet2memif`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Kernel2Ethernet2Memif?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/Kernel2Ethernet2Memif`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-kernel2ethernet2memif`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-memif -n ns-kernel2ethernet2memif`)
 	r.Run(`kubectl exec pods/alpine -n ns-kernel2ethernet2memif -- ping -c 4 172.16.1.100`)
@@ -57,7 +57,7 @@ func (s *Suite) TestKernel2IP2Kernel() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-kernel2ip2kernel`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Kernel2IP2Kernel?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/Kernel2IP2Kernel`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-kernel2ip2kernel`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-kernel2ip2kernel`)
 	r.Run(`kubectl exec pods/alpine -n ns-kernel2ip2kernel -- ping -c 4 172.16.1.100`)
@@ -68,7 +68,7 @@ func (s *Suite) TestKernel2IP2Memif() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-kernel2ip2memif`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Kernel2IP2Memif?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/Kernel2IP2Memif`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-kernel2ip2memif`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-memif -n ns-kernel2ip2memif`)
 	r.Run(`kubectl exec pods/alpine -n ns-kernel2ip2memif -- ping -c 4 172.16.1.100`)
@@ -79,7 +79,7 @@ func (s *Suite) TestKernel2Kernel() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-kernel2kernel`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Kernel2Kernel?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/Kernel2Kernel`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-kernel2kernel`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-kernel2kernel`)
 	r.Run(`kubectl exec pods/alpine -n ns-kernel2kernel -- ping -c 4 172.16.1.100`)
@@ -90,7 +90,7 @@ func (s *Suite) TestKernel2Memif() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-kernel2memif`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Kernel2Memif?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/Kernel2Memif`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-kernel2memif`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-memif -n ns-kernel2memif`)
 	r.Run(`kubectl exec pods/alpine -n ns-kernel2memif -- ping -c 4 172.16.1.100`)
@@ -101,7 +101,7 @@ func (s *Suite) TestMemif2Ethernet2Kernel() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-memif2ethernet2kernel`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Memif2Ethernet2Kernel?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/Memif2Ethernet2Kernel`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsc-memif -n ns-memif2ethernet2kernel`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-memif2ethernet2kernel`)
 	r.Run(`result=$(kubectl exec deployments/nsc-memif -n "ns-memif2ethernet2kernel" -- vppctl ping 172.16.1.100 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
@@ -112,7 +112,7 @@ func (s *Suite) TestMemif2Ethernet2Memif() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-memif2ethernet2memif`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Memif2Ethernet2Memif?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/Memif2Ethernet2Memif`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsc-memif -n ns-memif2ethernet2memif`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-memif -n ns-memif2ethernet2memif`)
 	r.Run(`result=$(kubectl exec deployments/nsc-memif -n "ns-memif2ethernet2memif" -- vppctl ping 172.16.1.100 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
@@ -123,7 +123,7 @@ func (s *Suite) TestMemif2IP2Kernel() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-memif2ip2kernel`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Memif2IP2Kernel?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/Memif2IP2Kernel`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsc-memif -n ns-memif2ip2kernel`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-memif2ip2kernel`)
 	r.Run(`result=$(kubectl exec deployments/nsc-memif -n "ns-memif2ip2kernel" -- vppctl ping 172.16.1.100 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
@@ -134,7 +134,7 @@ func (s *Suite) TestMemif2IP2Memif() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-memif2ip2memif`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Memif2IP2Memif?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/Memif2IP2Memif`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsc-memif -n ns-memif2ip2memif`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-memif -n ns-memif2ip2memif`)
 	r.Run(`result=$(kubectl exec deployments/nsc-memif -n "ns-memif2ip2memif" -- vppctl ping 172.16.1.100 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
@@ -145,7 +145,7 @@ func (s *Suite) TestMemif2Kernel() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-memif2kernel`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Memif2Kernel?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/Memif2Kernel`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsc-memif -n ns-memif2kernel`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-memif2kernel`)
 	r.Run(`result=$(kubectl exec deployments/nsc-memif -n "ns-memif2kernel" -- vppctl ping 172.16.1.100 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
@@ -156,7 +156,7 @@ func (s *Suite) TestMemif2Memif() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-memif2memif`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/Memif2Memif?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/Memif2Memif`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsc-memif -n ns-memif2memif`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-memif -n ns-memif2memif`)
 	r.Run(`result=$(kubectl exec deployments/nsc-memif -n "ns-memif2memif" -- vppctl ping 172.16.1.100 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
@@ -167,7 +167,7 @@ func (s *Suite) TestVl3_basic() {
 	s.T().Cleanup(func() {
 		r.Run(`kubectl delete ns ns-vl3`)
 	})
-	r.Run(`kubectl apply -k https://github.com/networkservicemesh/deployments-k8s/examples/use-cases/vl3-basic?ref=a85ecdd5f48144c1e132276bde9073ec4e92485d`)
+	r.Run(`kubectl apply -k ../../../../../../../../../home/nikita/repos/NSM/deployments-k8s/examples/use-cases/vl3-basic`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=2m pod -l app=alpine -n ns-vl3`)
 	r.Run(`nscs=$(kubectl  get pods -l app=alpine -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}" -n ns-vl3)` + "\n" + `[[ ! -z $nscs ]]`)
 	r.Run(`(` + "\n" + `for nsc in $nscs ` + "\n" + `do` + "\n" + `    ipAddr=$(kubectl exec -n ns-vl3 $nsc -- ifconfig nsm-1) || exit` + "\n" + `    ipAddr=$(echo $ipAddr | grep -Eo 'inet addr:[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}'| cut -c 11-)` + "\n" + `    for pinger in $nscs` + "\n" + `    do` + "\n" + `        echo $pinger pings $ipAddr` + "\n" + `        kubectl exec $pinger -n ns-vl3 -- ping -c2 -i 0.5 $ipAddr || exit` + "\n" + `    done` + "\n" + `done` + "\n" + `)`)
