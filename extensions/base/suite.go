@@ -21,12 +21,15 @@ package base
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/networkservicemesh/gotestmd/pkg/suites/shell"
 	"github.com/networkservicemesh/integration-tests/extensions/checkout"
 	"github.com/networkservicemesh/integration-tests/extensions/logs"
 	"github.com/networkservicemesh/integration-tests/extensions/prefetch"
+	"github.com/sirupsen/logrus"
 )
 
 // Suite is a base suite for generating tests. Contains extensions that can be used for assertion and automation goals.
@@ -42,6 +45,10 @@ func (s *Suite) AfterTest(suiteName, testName string) {
 	if s.T().Failed() {
 		logs.ClusterDump(suiteName, testName)
 	}
+}
+
+func (s *Suite) BeforeTest(suiteName, testName string) {
+
 }
 
 // TearDownSuite stores logs from containers that spawned during SuiteSetup.
@@ -75,6 +82,18 @@ func (s *Suite) SetupSuite() {
 		fmt.Sprintf("https://api.github.com/repos/%v/contents/apps?ref=%v", repo, version),
 	}
 
-	s.prefetch.SetT(s.T())
-	s.prefetch.SetupSuite()
+	logs.Initialize()
+	artifactsDir := logs.LogsConfig.ArtifactsDir
+	if filepath.IsLocal(artifactsDir) {
+		workingDir, err := os.Getwd()
+		if err != nil {
+			logrus.Fatal(err.Error())
+		}
+		logs.LogsConfig.ArtifactsDir = filepath.Join(workingDir, artifactsDir)
+		fmt.Printf("ARTIFACTS_DIR: %s\n", logs.LogsConfig.ArtifactsDir)
+		os.Setenv("ARTIFACTS_DIR", logs.LogsConfig.ArtifactsDir)
+	}
+
+	// s.prefetch.SetT(s.T())
+	// s.prefetch.SetupSuite()
 }

@@ -38,8 +38,8 @@ import (
 )
 
 var (
+	LogsConfig                 Config
 	once                       sync.Once
-	config                     Config
 	ctx                        context.Context
 	kubeConfigs                []string
 	matchRegex                 *regexp.Regexp
@@ -61,16 +61,16 @@ type Config struct {
 
 // nolint: gocyclo
 func initialize() {
-	if err := envconfig.Usage("logs", &config); err != nil {
+	if err := envconfig.Usage("logs", &LogsConfig); err != nil {
 		logrus.Fatal(err.Error())
 	}
 
-	if err := envconfig.Process("logs", &config); err != nil {
+	if err := envconfig.Process("logs", &LogsConfig); err != nil {
 		logrus.Fatal(err.Error())
 	}
 
-	matchRegex = regexp.MustCompile(config.AllowedNamespaces)
-	dockerRegex = regexp.MustCompile(config.AllowedContainers)
+	matchRegex = regexp.MustCompile(LogsConfig.AllowedNamespaces)
+	dockerRegex = regexp.MustCompile(LogsConfig.AllowedContainers)
 
 	var singleClusterKubeConfig = os.Getenv("KUBECONFIG")
 
@@ -80,7 +80,7 @@ func initialize() {
 
 	kubeConfigs = []string{}
 
-	for i := 1; i <= config.MaxKubeConfigs; i++ {
+	for i := 1; i <= LogsConfig.MaxKubeConfigs; i++ {
 		kubeConfig := os.Getenv("KUBECONFIG" + fmt.Sprint(i))
 		if kubeConfig != "" {
 			kubeConfigs = append(kubeConfigs, kubeConfig)
@@ -104,15 +104,18 @@ func initialize() {
 	clusterDumpSingleOperation = newSingleOperation()
 }
 
+func Initialize() {
+	once.Do(initialize)
+}
+
 // ClusterDump saves logs from all pods in specified namespaces
 func ClusterDump(suiteName, testName string) {
-	once.Do(func() { initialize() })
 	clusterDumpSingleOperation.Run(func() {
 		if ctx.Err() != nil {
 			return
 		}
 		for i := range kubeConfigs {
-			suitedir := filepath.Join(config.ArtifactsDir, fmt.Sprintf("cluster%v", i), suiteName, testName)
+			suitedir := filepath.Join(LogsConfig.ArtifactsDir, fmt.Sprintf("cluster%v", i), suiteName, testName)
 
 			nsString, _, _, _ := runner.Run(fmt.Sprintf(`kubectl --kubeconfig %v get ns -o go-template='{{range .items}}{{ .metadata.name }} {{end}}'`, kubeConfigs[i]))
 			nsList := strings.Split(nsString, " ")
@@ -174,3 +177,8 @@ func filterContainers(containerList []string) []string {
 
 	return result
 }
+
+// func MetricsDump(suiteName, testName string) {
+// 	testDir := filepath.Join(config.ArtifactsDir, suiteName, testName)
+// 	runner.Run(fmt.Sprintf(`kubectl top pod -A > %s/metrics`, testDir))
+// }
