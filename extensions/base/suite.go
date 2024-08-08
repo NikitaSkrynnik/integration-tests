@@ -51,7 +51,7 @@ func (s *Suite) TearDownSuite() {
 // SetupSuite runs all extensions
 func (s *Suite) SetupSuite() {
 	repo := "NikitaSkrynnik/deployments-k8s"
-	version := "fix-envs"
+	version := "fix-envs-test"
 
 	s.checkout.Version = version
 
