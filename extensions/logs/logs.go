@@ -177,8 +177,3 @@ func filterContainers(containerList []string) []string {
 
 	return result
 }
-
-// func MetricsDump(suiteName, testName string) {
-// 	testDir := filepath.Join(config.ArtifactsDir, suiteName, testName)
-// 	runner.Run(fmt.Sprintf(`kubectl top pod -A > %s/metrics`, testDir))
-// }
