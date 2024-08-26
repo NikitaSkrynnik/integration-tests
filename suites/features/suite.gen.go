@@ -24,6 +24,19 @@ func (s *Suite) SetupSuite() {
 		}
 	}
 }
+func (s *Suite) TestAnnotated_namespace() {
+	r := s.Runner("../deployments-k8s/examples/features/annotated-namespace")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-annotated-namespace`)
+	})
+	r.Run(`kubectl apply -k ../../../examples/features/annotated-namespace`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-annotated-namespace`)
+	r.Run(`kubectl annotate ns ns-annotated-namespace networkservicemesh.io=kernel://annotated-namespace/nsm-1`)
+	r.Run(`kubectl apply -f ../../../examples/features/annotated-namespace/client.yaml`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-annotated-namespace`)
+	r.Run(`kubectl exec deployments/alpine -n ns-annotated-namespace -- ping -c 4 172.16.1.100`)
+	r.Run(`kubectl exec deployments/nse-kernel -n ns-annotated-namespace -- ping -c 4 172.16.1.101`)
+}
 func (s *Suite) TestChange_nse_dynamically() {
 	r := s.Runner("../deployments-k8s/examples/features/change-nse-dynamically")
 	s.T().Cleanup(func() {
@@ -69,6 +82,125 @@ func (s *Suite) TestKernel2Kernel_dual_stack() {
 	r.Run(`kubectl exec pods/alpine -n ns-kernel2kernel-dual-stack -- ping -c 4 172.16.1.100`)
 	r.Run(`kubectl exec deployments/nse-kernel -n ns-kernel2kernel-dual-stack -- ping -c 4 172.16.1.101`)
 }
+func (s *Suite) TestExclude_prefixes() {
+	r := s.Runner("../deployments-k8s/examples/features/exclude-prefixes")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete configmap excluded-prefixes-config` + "\n" + `kubectl delete ns ns-exclude-prefixes`)
+	})
+	r.Run(`kubectl apply -k ../../../examples/features/exclude-prefixes/configmap`)
+	r.Run(`kubectl apply -k ../../../examples/features/exclude-prefixes`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-exclude-prefixes`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-exclude-prefixes`)
+	r.Run(`kubectl exec pods/alpine -n ns-exclude-prefixes -- ping -c 4 172.16.1.200`)
+	r.Run(`kubectl exec deployments/nse-kernel -n ns-exclude-prefixes -- ping -c 4 172.16.1.203`)
+}
+func (s *Suite) TestExclude_prefixes_client() {
+	r := s.Runner("../deployments-k8s/examples/features/exclude-prefixes-client")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-exclude-prefixes-client`)
+	})
+	r.Run(`kubectl apply -k ../../../examples/features/exclude-prefixes-client`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-exclude-prefixes-client`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel-1 -n ns-exclude-prefixes-client`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel-2 -n ns-exclude-prefixes-client`)
+	r.Run(`kubectl exec pods/alpine -n ns-exclude-prefixes-client -- ping -c 4 172.16.1.96`)
+	r.Run(`kubectl exec pods/alpine -n ns-exclude-prefixes-client -- ping -c 4 172.16.1.98`)
+	r.Run(`kubectl exec deployments/nse-kernel-1 -n ns-exclude-prefixes-client -- ping -c 4 172.16.1.97`)
+	r.Run(`kubectl exec deployments/nse-kernel-2 -n ns-exclude-prefixes-client -- ping -c 4 172.16.1.99`)
+}
+func (s *Suite) TestKernel2IP2Kernel_ipv6() {
+	r := s.Runner("../deployments-k8s/examples/features/ipv6/Kernel2IP2Kernel_ipv6")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-kernel2ip2kernel-ipv6`)
+	})
+	r.Run(`kubectl apply -k ../../../../examples/features/ipv6/Kernel2IP2Kernel_ipv6`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-kernel2ip2kernel-ipv6`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-kernel2ip2kernel-ipv6`)
+	r.Run(`kubectl exec pods/alpine -n ns-kernel2ip2kernel-ipv6 -- ping -c 4 2001:db8::`)
+	r.Run(`kubectl exec deployments/nse-kernel -n ns-kernel2ip2kernel-ipv6 -- ping -c 4 2001:db8::1`)
+}
+func (s *Suite) TestKernel2IP2Memif_ipv6() {
+	r := s.Runner("../deployments-k8s/examples/features/ipv6/Kernel2IP2Memif_ipv6")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-kernel2ip2memif-ipv6`)
+	})
+	r.Run(`kubectl apply -k ../../../../examples/features/ipv6/Kernel2IP2Memif_ipv6`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-kernel2ip2memif-ipv6`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-memif -n ns-kernel2ip2memif-ipv6`)
+	r.Run(`kubectl exec pods/alpine -n ns-kernel2ip2memif-ipv6 -- ping -c 4 2001:db8::`)
+	r.Run(`result=$(kubectl exec deployments/nse-memif -n "ns-kernel2ip2memif-ipv6" -- vppctl ping 2001:db8::1 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
+}
+func (s *Suite) TestKernel2Kernel_ipv6() {
+	r := s.Runner("../deployments-k8s/examples/features/ipv6/Kernel2Kernel_ipv6")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-kernel2kernel-ipv6`)
+	})
+	r.Run(`kubectl apply -k ../../../../examples/features/ipv6/Kernel2Kernel_ipv6`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-kernel2kernel-ipv6`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-kernel2kernel-ipv6`)
+	r.Run(`kubectl exec pods/alpine -n ns-kernel2kernel-ipv6 -- ping -c 4 2001:db8::`)
+	r.Run(`kubectl exec deployments/nse-kernel -n ns-kernel2kernel-ipv6 -- ping -c 4 2001:db8::1`)
+}
+func (s *Suite) TestMemif2IP2Kernel_ipv6() {
+	r := s.Runner("../deployments-k8s/examples/features/ipv6/Memif2IP2Kernel_ipv6")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-memif2ip2kernel-ipv6`)
+	})
+	r.Run(`kubectl apply -k ../../../../examples/features/ipv6/Memif2IP2Kernel_ipv6`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsc-memif -n ns-memif2ip2kernel-ipv6`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-memif2ip2kernel-ipv6`)
+	r.Run(`result=$(kubectl exec deployments/nsc-memif -n "ns-memif2ip2kernel-ipv6" -- vppctl ping 2001:db8:: repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
+	r.Run(`kubectl exec deployments/nse-kernel -n ns-memif2ip2kernel-ipv6 -- ping -c 4 2001:db8::1`)
+}
+func (s *Suite) TestMemif2IP2Memif_ipv6() {
+	r := s.Runner("../deployments-k8s/examples/features/ipv6/Memif2IP2Memif_ipv6")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-memif2ip2memif-ipv6`)
+	})
+	r.Run(`kubectl apply -k ../../../../examples/features/ipv6/Memif2IP2Memif_ipv6`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsc-memif -n ns-memif2ip2memif-ipv6`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-memif -n ns-memif2ip2memif-ipv6`)
+	r.Run(`result=$(kubectl exec deployments/nsc-memif -n "ns-memif2ip2memif-ipv6" -- vppctl ping 2001:db8:: repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
+	r.Run(`result=$(kubectl exec deployments/nse-memif -n "ns-memif2ip2memif-ipv6" -- vppctl ping 2001:db8::1 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
+}
+func (s *Suite) TestMemif2Memif_ipv6() {
+	r := s.Runner("../deployments-k8s/examples/features/ipv6/Memif2Memif_ipv6")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-memif2memif-ipv6`)
+	})
+	r.Run(`kubectl apply -k ../../../../examples/features/ipv6/Memif2Memif_ipv6`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsc-memif -n ns-memif2memif-ipv6`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-memif -n ns-memif2memif-ipv6`)
+	r.Run(`result=$(kubectl exec deployments/nsc-memif -n "ns-memif2memif-ipv6" -- vppctl ping ipv6 2001:db8:: repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
+	r.Run(`result=$(kubectl exec deployments/nse-memif -n "ns-memif2memif-ipv6" -- vppctl ping ipv6 2001:db8::1 repeat 4)` + "\n" + `echo ${result}` + "\n" + `! echo ${result} | grep -E -q "(100% packet loss)|(0 sent)|(no egress interface)"`)
+}
+func (s *Suite) TestMultiple_services() {
+	r := s.Runner("../deployments-k8s/examples/features/multiple-services")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-multiple-services`)
+	})
+	r.Run(`kubectl apply -k ../../../examples/features/multiple-services`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=alpine -n ns-multiple-services`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel-1 -n ns-multiple-services`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel-2 -n ns-multiple-services`)
+	r.Run(`kubectl exec pods/alpine -n ns-multiple-services -- ping -c 4 172.16.1.100`)
+	r.Run(`kubectl exec pods/nse-kernel-1 -n ns-multiple-services -- ping -c 4 172.16.1.101`)
+	r.Run(`kubectl exec pods/alpine -n ns-multiple-services -- ping -c 4 172.16.2.100`)
+	r.Run(`kubectl exec pods/nse-kernel-2 -n ns-multiple-services -- ping -c 4 172.16.2.101`)
+}
+func (s *Suite) TestMutually_aware_nses() {
+	r := s.Runner("../deployments-k8s/examples/features/mutually-aware-nses")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-mutually-aware-nses`)
+	})
+	r.Run(`kubectl apply -k ../../../examples/features/mutually-aware-nses`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsc-kernel -n ns-mutually-aware-nses`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel-1 -n ns-mutually-aware-nses`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel-2 -n ns-mutually-aware-nses`)
+	r.Run(`kubectl exec deployments/nsc-kernel -n ns-mutually-aware-nses -- apk update` + "\n" + `kubectl exec deployments/nsc-kernel -n ns-mutually-aware-nses -- apk add iproute2`)
+	r.Run(`result=$(kubectl exec deployments/nsc-kernel -n ns-mutually-aware-nses -- ip r get 172.16.1.100 from 172.16.1.101 ipproto tcp dport 6666)` + "\n" + `echo ${result}` + "\n" + `echo ${result} | grep -E -q "172.16.1.100 from 172.16.1.101 dev nsm-1"`)
+	r.Run(`result=$(kubectl exec deployments/nsc-kernel -n ns-mutually-aware-nses -- ip r get 172.16.1.100 from 172.16.1.101 ipproto udp dport 5555)` + "\n" + `echo ${result}` + "\n" + `echo ${result} | grep -E -q "172.16.1.100 from 172.16.1.101 dev nsm-2"`)
+}
 func (s *Suite) TestOpa() {
 	r := s.Runner("../deployments-k8s/examples/features/opa")
 	s.T().Cleanup(func() {
@@ -78,4 +210,20 @@ func (s *Suite) TestOpa() {
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nsc-kernel -n ns-opa`)
 	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-opa`)
 	r.Run(`kubectl logs deployments/nsc-kernel -n ns-opa | grep "PermissionDenied desc = no sufficient privileges"`)
+}
+func (s *Suite) TestPolicy_based_routing() {
+	r := s.Runner("../deployments-k8s/examples/features/policy-based-routing")
+	s.T().Cleanup(func() {
+		r.Run(`kubectl delete ns ns-policy-based-routing`)
+	})
+	r.Run(`kubectl apply -k ../../../examples/features/policy-based-routing`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nettools -n ns-policy-based-routing`)
+	r.Run(`kubectl wait --for=condition=ready --timeout=1m pod -l app=nse-kernel -n ns-policy-based-routing`)
+	r.Run(`kubectl exec pods/nettools -n ns-policy-based-routing -- ping -c 4 172.16.1.100`)
+	r.Run(`kubectl exec deployments/nse-kernel -n ns-policy-based-routing -- ping -c 4 172.16.1.101`)
+	r.Run(`result=$(kubectl exec pods/nettools -n ns-policy-based-routing -- ip r get 172.16.3.1 from 172.16.2.201 ipproto tcp dport 6666)` + "\n" + `echo ${result}` + "\n" + `echo ${result} | grep -E -q "172.16.3.1 from 172.16.2.201 via 172.16.2.200 dev nsm-1 table 1"`)
+	r.Run(`result=$(kubectl exec pods/nettools -n ns-policy-based-routing -- ip r get 172.16.3.1 from 172.16.2.201 ipproto tcp sport 5555)` + "\n" + `echo ${result}` + "\n" + `echo ${result} | grep -E -q "172.16.3.1 from 172.16.2.201 dev nsm-1 table 2"`)
+	r.Run(`result=$(kubectl exec pods/nettools -n ns-policy-based-routing -- ip r get 172.16.4.1 ipproto udp dport 6666)` + "\n" + `echo ${result}` + "\n" + `echo ${result} | grep -E -q "172.16.4.1 dev nsm-1 table 3 src 172.16.1.101"`)
+	r.Run(`result=$(kubectl exec pods/nettools -n ns-policy-based-routing -- ip r get 172.16.4.1 ipproto udp dport 6668)` + "\n" + `echo ${result}` + "\n" + `echo ${result} | grep -E -q "172.16.4.1 dev nsm-1 table 4 src 172.16.1.101"`)
+	r.Run(`result=$(kubectl exec pods/nettools -n ns-policy-based-routing -- ip -6 route get 2004::5 from 2004::3 ipproto udp dport 5555)` + "\n" + `echo ${result}` + "\n" + `echo ${result} | grep -E -q "via 2004::6 dev nsm-1 table 5 src 2004::3"`)
 }
